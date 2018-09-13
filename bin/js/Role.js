@@ -31,7 +31,7 @@ var Role = /** @class */ (function (_super) {
         this.body = new Laya.Animation();
         //把机体添加到容器内
         this.addChild(this.body);
-        this.playAction("hero_down");
+        this.playAction("hero_fly");
     };
     Role.prototype.playAction = function (action) {
         this.body.play(0, true, action);

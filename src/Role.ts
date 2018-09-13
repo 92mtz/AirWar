@@ -2,8 +2,19 @@
  * 角色类
  */
 class Role extends Laya.Sprite {
-    //定义飞机身体
+    // 定义飞机身体
     private body: Laya.Animation
+    // 角色类型
+    private type: string
+    // 阵营
+    public camp: number
+    // 血量
+    public hp: number
+    // 敌军速度
+    public speed: number
+    // 被击半径
+    public hitRadius: number
+
     constructor() {
         super();
         //初始化
@@ -27,5 +38,4 @@ class Role extends Laya.Sprite {
         //设置机身居中
         this.body.pos(-bound.width / 2, -bound.height / 2);
     }
-
 }
