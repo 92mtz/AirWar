@@ -17,6 +17,8 @@ class Game {
         this.hero = new Role();
         //初始化主角
         this.hero.init("hero", 0, 1, 0, 30);
+        // 设置射击类型
+        this.hero.shootType = 1;
         //设置角色位置
         this.hero.pos(200, 500);
         //把角色添加到舞台上
@@ -36,18 +38,81 @@ class Game {
                 // 根据飞机速度改变位置
                 role.y += role.speed;
                 // 如果敌机移动到显示区域外则移除
-                if (role.y > 1000) {
-                    console.log(Laya.Pool)
+                if (role.y > 1000 || !role.visible || (role.isBullet && role.y < -20)) {
                     // 舞台移除自己
                     role.removeSelf();
+                    // 回收前重置状态
+                    role.isBullet = false;
+                    role.visible = true;
                     // 回收到对象池
                     Laya.Pool.recover("role", role);
                 }
             }
+            if (role.shootType > 0) {
+                // 获取当前时间
+                var time: number = Laya.Browser.now();
+                // 如果当前时间大于下次射击时间
+                if (time > role.shootTime) {
+                    role.shootTime = time + role.shootInterval;
+                    // 从对象池中创建一个子弹
+                    var bullet: Role = Laya.Pool.getItemByClass("role", Role);
+                    // 初始化子弹信息
+                    bullet.init("bullet1", role.camp, 1, -5, 1);
+                    // 设置角色类型为子弹类型
+                    bullet.isBullet = true;
+                    // 设置子弹位置
+                    bullet.pos(role.x, role.y - role.hitRadius - 10);
+                    // 添加到舞台上
+                    Laya.stage.addChild(bullet);
+                }
+            }
+        }
+        // 检测碰撞
+        for (var i: number = Laya.stage.numChildren - 1; i > 0; i--) {
+            // 获取角色对象1
+            var role1: Role = Laya.stage.getChildAt(i) as Role;
+            if (role1.hp < 1) continue;
+            for (var j: number = Laya.stage.numChildren - 1; j > 0; j--) {
+                // 如果角色已经死亡，则忽略
+                if (!role.visible) continue;
+                // 获取角色对象2
+                var role2: Role = Laya.stage.getChildAt(j) as Role;
+                // 如果角色未死亡，并且阵营不同才能进行碰撞
+                if (role2.hp > 0 && role1.camp != role2.camp) {
+                    // 计算碰撞区域
+                    var hitRadius: number = role1.hitRadius + role2.hitRadius;
+                    // 根据距离判断是否碰撞
+                    if (Math.abs(role1.x - role2.x) < hitRadius && Math.abs(role1.y - role2.y) < hitRadius) {
+                        //碰撞之后掉血
+                        this.lostHp(role1, 1);
+                        this.lostHp(role2, 1);
+                    }
+                }
+            }
+        }
+        // 如果主角死亡，则停止游戏循环
+        if (this.hero.hp < 1) {
+            Laya.timer.clear(this, this.onLoop);
         }
         // 每隔30帧创建新敌机
         if (Laya.timer.currFrame % 60 === 0) {
             this.createEnemy(2);
+        }
+    }
+    lostHp(role: Role, lostHp: number): void {
+        // 减血
+        role.hp -= lostHp;
+        if (role.hp > 0) {
+            // 如果未死亡，播放碰撞的动画
+            role.playAction("hit");
+        } else {
+            if (role.isBullet) {
+                // 如果是子弹,则直接隐藏
+                role.visible = false;
+            } else {
+                // 如果不是子弹,则播放爆炸的动画
+                role.playAction("down");
+            }
         }
     }
     onMouseMove(): void {
@@ -61,13 +126,13 @@ class Game {
     //敌机被击半径
     private radiuss: Array<any> = [15, 30, 70]
     createEnemy(num: number): void {
-        for (let i: number = 0; i < num; i++) {
+        for (var i: number = 0; i < num; i++) {
             // 生成随机数
-            let r: number = Math.random();
+            var r: number = Math.random();
             // 根据随机数设置敌机类型
-            let _type: number = r < 0.75 ? 0 : r < 0.9 ? 1 : 2;
+            var _type: number = r < 0.75 ? 0 : r < 0.9 ? 1 : 2;
             // 新建敌机
-            let enemy: Role = Laya.Pool.getItemByClass('role', Role);
+            var enemy: Role = Laya.Pool.getItemByClass('role', Role);
             // 初始化敌机对象
             enemy.init("enemy" + (_type + 1), 1, this.hps[_type], this.speeds[_type], this.radiuss[_type]);
             // 随机放置敌机位置

@@ -1,6 +1,8 @@
 D .
 D war
 R 4F008F46 background.png
+P E0432FE6 bullet1.png
+P F3A98A3A bullet2.png
 P 2BF0B93D enemy1_down1.png
 P B390F16A enemy1_down2.png
 P 31482119 enemy1_down3.png
