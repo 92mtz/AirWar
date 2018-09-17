@@ -7,7 +7,7 @@ class Role extends Laya.Sprite {
     // 定义动画是否已被缓存
     private static cached: boolean = false;
     // 角色类型
-    private type: string;
+    public type: string;
     // 阵营
     public camp: number;
     // 血量
@@ -25,20 +25,22 @@ class Role extends Laya.Sprite {
     public shootTime: number = Laya.Browser.now() + 2000;
     // 当前动作
     public action: string = "";
-    // 是否是子弹
-    public isBullet: boolean = false;
+    // 主角方类型 0、普通；1、子弹；2、炸药；3、补给品
+    public heroType: number = 0;
+
 
     constructor() {
         super();
         // 初始化
         // this.init();
     }
-    public init(_type: string, _camp: number, _hp: number, _speed: number, _hitRadius: number): void {
+    public init(_type: string, _camp: number, _hp: number, _speed: number, _hitRadius: number, _heroType: number = 0): void {
         this.type = _type;
         this.camp = _camp;
         this.hp = _hp;
         this.speed = _speed;
         this.hitRadius = _hitRadius;
+        this.heroType = _heroType;
         if (!Role.cached) {
             Role.cached = true;
             // 缓存主角飞行动画
@@ -61,10 +63,14 @@ class Role extends Laya.Sprite {
             Laya.Animation.createFrames(["war/enemy3_down1.png", "war/enemy3_down2.png", "war/enemy3_down3.png", "war/enemy3_down4.png", "war/enemy3_down5.png", "war/enemy3_down6.png"], "enemy3_down");
             // 缓存敌机3的碰撞动画
             Laya.Animation.createFrames(["war/enemy3_hit.png"], "enemy3_hit");
-            // 缓存子弹动画
+            // 缓存子弹1动画
             Laya.Animation.createFrames(["war/bullet1.png"], "bullet1_fly");
-            // 缓存子弹动画
+            // 缓存子弹2动画
             Laya.Animation.createFrames(["war/bullet2.png"], "bullet2_fly");
+            // 缓存强化包动画
+            Laya.Animation.createFrames(["war/ufo1.png"], "ufo1_fly");
+            // 缓存医疗包动画
+            Laya.Animation.createFrames(["war/ufo2.png"], "ufo2_fly");
         }
         if (!this.body) {
             // 创建一个动画作为飞机的身体

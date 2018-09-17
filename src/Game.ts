@@ -3,6 +3,24 @@
  */
 class Game {
     private hero: Role;
+    //敌机血量
+    private hps: Array<any> = [1, 2, 10];
+    //敌机速度
+    private speeds: Array<any> = [3, 2, 1];
+    //敌机被击半径
+    private radiuss: Array<any> = [15, 30, 70];
+
+    // 子弹发射偏移位置
+    private bulletPos: Array<Array<number>> = [[0], [-15, 15], [-30, 0, 30], [-45, -15, 15, 45]];
+    // 关卡等级
+    private level: number = 0;
+    // 积分成绩
+    private score: number = 0;
+    // 升级等级所需成绩数量
+    private levelUpScore: number = 0;
+    // 子弹级别
+    private bulletLevel: number = 0;
+
     constructor() {
         //初始化引擎，设置游戏宽高
         Laya.init(400, 852);
@@ -38,32 +56,35 @@ class Game {
                 // 根据飞机速度改变位置
                 role.y += role.speed;
                 // 如果敌机移动到显示区域外则移除
-                if (role.y > 1000 || !role.visible || (role.isBullet && role.y < -20)) {
+                if (role.y > 1000 || !role.visible || (role.heroType && role.y < -20)) {
                     // 舞台移除自己
                     role.removeSelf();
                     // 回收前重置状态
-                    role.isBullet = false;
+                    role.heroType = 0;
                     role.visible = true;
                     // 回收到对象池
                     Laya.Pool.recover("role", role);
                 }
             }
+            // 处理发射子弹逻辑
             if (role.shootType > 0) {
                 // 获取当前时间
                 var time: number = Laya.Browser.now();
                 // 如果当前时间大于下次射击时间
                 if (time > role.shootTime) {
                     role.shootTime = time + role.shootInterval;
-                    // 从对象池中创建一个子弹
-                    var bullet: Role = Laya.Pool.getItemByClass("role", Role);
-                    // 初始化子弹信息
-                    bullet.init("bullet1", role.camp, 1, -5, 1);
-                    // 设置角色类型为子弹类型
-                    bullet.isBullet = true;
-                    // 设置子弹位置
-                    bullet.pos(role.x, role.y - role.hitRadius - 10);
-                    // 添加到舞台上
-                    Laya.stage.addChild(bullet);
+                    // 根据不同的子弹类型，设置不同的位置
+                    var pos: Array<number> = this.bulletPos[role.shootType - 1]
+                    for (var index: number = 0; index < pos.length; index++) {
+                        // 从对象池中创建一个子弹
+                        var bullet: Role = Laya.Pool.getItemByClass("role", Role);
+                        // 初始化子弹信息
+                        bullet.init("bullet1", role.camp, 1, -4 - role.shootType - Math.floor(this.level / 15), 1, 1);
+                        // 设置子弹位置
+                        bullet.pos(role.x + pos[index], role.y - role.hitRadius - 10);
+                        // 添加到舞台上
+                        Laya.stage.addChild(bullet);
+                    }
                 }
             }
         }
@@ -102,16 +123,45 @@ class Game {
     lostHp(role: Role, lostHp: number): void {
         // 减血
         role.hp -= lostHp;
-        if (role.hp > 0) {
+        if (role.heroType === 2) {
+            // 每次吃一个子弹升级道具，子弹升级+1
+            this.bulletLevel++;
+            // 子弹每升2级，子弹数量增加1，最大数量为4
+            this.hero.shootType = Math.min(Math.floor(this.bulletLevel / 2) + 1, 4);
+            // 子弹级别越高，发射频率越快
+            this.hero.shootInterval = 500 - 20 * (this.bulletLevel > 20 ? 20 : this.bulletLevel);
+            // 隐藏道具
+            role.visible = false;
+        } else if (role.heroType === 3) {
+            // 每次吃一个医疗包，血量+1
+            this.hero.hp++;
+            if (this.hero.hp > 10) {
+                this.hero.hp = 10;
+            }
+            // 隐藏道具
+            role.visible = false;
+        } else if (role.hp > 0) {
             // 如果未死亡，播放碰撞的动画
             role.playAction("hit");
         } else {
-            if (role.isBullet) {
+            if (role.heroType) {
                 // 如果是子弹,则直接隐藏
                 role.visible = false;
             } else {
                 // 如果不是子弹,则播放爆炸的动画
                 role.playAction("down");
+                // 击落boss掉落血瓶或者子弹升级道具
+                if (role.type === 'enemy3') {
+                    //随机是子弹升级道具或者是血瓶
+                    var type: number = Math.random() < 0.7 ? 2 : 3;
+                    // 掉落血瓶或者是子弹升级道具
+                    var item: Role = Laya.Pool.getItemByClass('role', Role);
+                    // 初始化信息
+                    item.init("ufo" + (type - 1), role.camp, 1, 1, 15, type);
+                    // 设置位置
+                    item.pos(role.x, role.y);
+                    Laya.stage.addChild(item);
+                }
             }
         }
     }
@@ -119,12 +169,6 @@ class Game {
         //始终保持主角与鼠标位置一直
         this.hero.pos(Laya.stage.mouseX, Laya.stage.mouseY)
     }
-    //敌机血量
-    private hps: Array<any> = [1, 2, 10]
-    //敌机速度
-    private speeds: Array<any> = [3, 2, 1]
-    //敌机被击半径
-    private radiuss: Array<any> = [15, 30, 70]
     createEnemy(num: number): void {
         for (var i: number = 0; i < num; i++) {
             // 生成随机数
